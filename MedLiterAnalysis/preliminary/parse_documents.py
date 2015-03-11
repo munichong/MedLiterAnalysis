@@ -3,7 +3,8 @@ Created on Jul 12, 2014
 
 @author: munichong
 '''
-import os, re, htmlentitydefs
+import os, re
+from html import entities
 from xml.dom import minidom
 import string
 
@@ -15,15 +16,15 @@ def unescape(text):
             # character reference
             try:
                 if text[:3] == "&#x":
-                    return unichr(int(text[3:-1], 16))
+                    return chr(int(text[3:-1], 16))
                 else:
-                    return unichr(int(text[2:-1]))
+                    return chr(int(text[2:-1]))
             except ValueError:
                 pass
         else:
             # named entity
             try:
-                text = unichr(htmlentitydefs.name2codepoint[text[1:-1]])
+                text = chr(entities.name2codepoint[text[1:-1]])
             except KeyError:
                 pass
         return text # leave as is
@@ -65,7 +66,7 @@ def is_valid_grantNo(gn):
  
 def extract_grantNo(text):
     
-    """ If being granted by ACS, whether ACK has Grant No. (two possible formats) """
+    """ If being granted by ACS, check whether target content has Grant No. (two possible formats) """
     grantNo_long = findRegexPattern( "([A-Z]{2,5}[\- ][0-9]{2}\-[0-9]{3}\-[0-9]{2}\-[A-Z]{2,5})", 
                                             text )    # REG-03-098-08-EFS
     
@@ -143,7 +144,7 @@ for dirname in os.listdir( path ):
         acknowledgement = findRegexPattern( "<ack[\s\S]*?>([\s\S]*?)</ack>", fdata )
         abstract = findRegexPattern( "<abstract[\s\S]*?>([\s\S]*?)</abstract>", fdata )
         grantNo = ''
-        """ whether the article has ACK """
+        """ whether the article has ACK and ABS """
         target_content = ''
         if acknowledgement == None and abstract == None:
             print "NO ACKNOWLEDGEMENT AND ABSTRACT FOUND!"
@@ -173,6 +174,7 @@ for dirname in os.listdir( path ):
         if not ( ( has_ACS_full or has_ACS_abbr ) and has_grantNo ):
             continue
         
+        """ For output """
         journal_title = extract_target_content( "<journal-title>([\s\S]*?)</journal-title>", fdata )
         journal_title = journal_title.lower()
         print "JOURNAL-TITLE:", journal_title
