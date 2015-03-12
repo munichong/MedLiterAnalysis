@@ -76,5 +76,5 @@ for folder in folders:
     print "\n******", path   
     for dirname in os.listdir( path ):   
         for filename in os.listdir( path + dirname ):
-            
+            pass
         
