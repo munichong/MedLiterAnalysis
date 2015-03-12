@@ -120,26 +120,26 @@ def extract_target_content(regex, text):
     return target_content.replace("  ", " ")
 
 
-
-folder = "articles.O-Z" # articles.A-B , articles.C-H , articles.I-N , articles.O-Z
-path = "../articles/" + folder + '/'
+root = "J:\\Medical Papers Data\\"
+folder = "articles.A-B\\" # articles.A-B , articles.C-H , articles.I-N , articles.O-Z
+path =  root + folder
 output = []
 
 # visit = {}
 for dirname in os.listdir( path ):
 #     visit[dirname] = 0
-    if dirname != "Oncogene":
-        continue
+#     if dirname != "Oncogene":
+#         continue
     print "\n******", path + dirname
     for filename in os.listdir( path + dirname ):
 #         visit[dirname] += 1
-        if filename != "Oncogene_2012_Sep_6_31(36)_4045-4053.nxml":
-            continue
+#         if filename != "Oncogene_2012_Sep_6_31(36)_4045-4053.nxml":
+#             continue
         print dirname + filename
         if filename[0] == '#' and filename[-1] == '#':
             continue
         
-        fdata = open( path + dirname + '/' + filename , 'r').read()
+        fdata = open( path + dirname + '\\' + filename , 'r').read()
         
         acknowledgement = findRegexPattern( "<ack[\s\S]*?>([\s\S]*?)</ack>", fdata )
         abstract = findRegexPattern( "<abstract[\s\S]*?>([\s\S]*?)</abstract>", fdata )
@@ -161,7 +161,9 @@ for dirname in os.listdir( path ):
 #         print "TARGET CONTENT:", target_content
         has_ACS_full = False
         has_ACS_abbr = False
-        if "American Cancer Society" in target_content:
+        if ( "American Cancer Society" in target_content or 
+             "American cancer society" in target_content or
+             "american cancer society" in target_content ):
             has_ACS_full = True
         elif " ACS " in target_content:
             has_ACS_abbr = True
@@ -174,6 +176,7 @@ for dirname in os.listdir( path ):
         if not ( ( has_ACS_full or has_ACS_abbr ) and has_grantNo ):
             continue
         
+        
         """ For output """
         journal_title = extract_target_content( "<journal-title>([\s\S]*?)</journal-title>", fdata )
         journal_title = journal_title.lower()
@@ -183,6 +186,7 @@ for dirname in os.listdir( path ):
         article_title = extract_target_content( "<title-group[\s\S]*?>([\s\S]*?)</title-group>", fdata )
         article_title = article_title.replace( "-", " " )
         print "ARTICLE-TITLE:", article_title
+        
         
         this_output = [ folder, dirname, filename, article_title, journal_title, grantNo ]
         output.append( this_output )
