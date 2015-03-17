@@ -5,7 +5,6 @@ Created on Jul 12, 2014
 '''
 import os, re
 from html import entities
-from xml.dom import minidom
 import string
 
 def unescape(text):
@@ -113,97 +112,103 @@ def extract_grantNo(text):
         return "&".join( grantNo )
 
 def extract_target_content(regex, text):
-    target_content = findRegexPattern( regex, text )[0] # Get the first 
+    target_content = findRegexPattern( regex, text )
+    if not target_content:
+        return None
+    
+    target_content = target_content[0] # Get the first 
     target_content = remove_tags( target_content )
 #     target_content = filter( lambda x: x in string.printable, target_content )
     target_content = replace_unprintable( target_content, "" )
     return target_content.replace("  ", " ")
 
+def create_publication_from_rawtext(fdata):
+    acknowledgement = findRegexPattern( "<ack[\s\S]*?>([\s\S]*?)</ack>", fdata )
+    abstract = findRegexPattern( "<abstract[\s\S]*?>([\s\S]*?)</abstract>", fdata )
+    
+    """ whether the article has ACK and ABS """
+    target_content = ''
+    if acknowledgement == None and abstract == None:
+#         print("NO ACKNOWLEDGEMENT AND ABSTRACT FOUND!")
+        return None
+    elif acknowledgement != None and abstract != None:
+        target_content = acknowledgement[0] + " " + abstract[0]
+    else:
+        """ acknowledgement == None or abstract == None (not both or neither) """
+        target_content = acknowledgement[0] if abstract == None else abstract[0]
+        
+    target_content = remove_tags( target_content )
+#       print "TARGET CONTENT:", target_content
+    has_ACS_full = False
+    has_ACS_abbr = False
+    if ( "American Cancer Society" in target_content or 
+        "American cancer society" in target_content or
+        "american cancer society" in target_content ):
+        has_ACS_full = True
+    elif " ACS " in target_content:
+        has_ACS_abbr = True
+        
+    has_grantNo = False
+    grantNo = extract_grantNo( target_content )
+    if grantNo:
+        has_grantNo = True
+        
+    if not ( ( has_ACS_full or has_ACS_abbr ) and has_grantNo ):
+        return None
+        
+    """ For output """
+    journal_title = extract_target_content( "<journal-title>([\s\S]*?)</journal-title>", fdata )
+    journal_title = journal_title.lower()
+#     print("JOURNAL-TITLE:", journal_title)
+        
+    """ <title-group> <article-title> </article-title> <subtitle> </subtitle> <title-group>  """
+    article_title = extract_target_content( "<title-group[\s\S]*?>([\s\S]*?)</title-group>", fdata )
+    article_title = article_title.replace( "-", " " )
+#     print("ARTICLE-TITLE:", article_title)
+        
+        
+    return [ folder, dirname, filename, article_title, journal_title, grantNo ]    
 
-root = "J:\\Medical Papers Data\\"
-folder = "articles.A-B\\" # articles.A-B , articles.C-H , articles.I-N , articles.O-Z
-path =  root + folder
-output = []
 
-# visit = {}
-for dirname in os.listdir( path ):
-#     visit[dirname] = 0
-#     if dirname != "Oncogene":
-#         continue
-    print "\n******", path + dirname
-    for filename in os.listdir( path + dirname ):
-#         visit[dirname] += 1
-#         if filename != "Oncogene_2012_Sep_6_31(36)_4045-4053.nxml":
-#             continue
-        print dirname + filename
-        if filename[0] == '#' and filename[-1] == '#':
-            continue
-        
-        fdata = open( path + dirname + '\\' + filename , 'r').read()
-        
-        acknowledgement = findRegexPattern( "<ack[\s\S]*?>([\s\S]*?)</ack>", fdata )
-        abstract = findRegexPattern( "<abstract[\s\S]*?>([\s\S]*?)</abstract>", fdata )
-        grantNo = ''
-        """ whether the article has ACK and ABS """
-        target_content = ''
-        if acknowledgement == None and abstract == None:
-            print "NO ACKNOWLEDGEMENT AND ABSTRACT FOUND!"
-            continue
-        elif acknowledgement != None and abstract != None:
-            target_content = acknowledgement[0] + " " + abstract[0]
-        else:
-            """ acknowledgement == None or abstract == None (not both or neither) """
-            target_content = acknowledgement[0] if abstract == None else abstract[0]
-        
-        
-        
-        target_content = remove_tags( target_content )
-#         print "TARGET CONTENT:", target_content
-        has_ACS_full = False
-        has_ACS_abbr = False
-        if ( "American Cancer Society" in target_content or 
-             "American cancer society" in target_content or
-             "american cancer society" in target_content ):
-            has_ACS_full = True
-        elif " ACS " in target_content:
-            has_ACS_abbr = True
-        
-        has_grantNo = False
-        grantNo = extract_grantNo( target_content )
-        if grantNo:
-            has_grantNo = True
-        
-        if not ( ( has_ACS_full or has_ACS_abbr ) and has_grantNo ):
-            continue
-        
-        
-        """ For output """
-        journal_title = extract_target_content( "<journal-title>([\s\S]*?)</journal-title>", fdata )
-        journal_title = journal_title.lower()
-        print "JOURNAL-TITLE:", journal_title
-        
-        """ <title-group> <article-title> </article-title> <subtitle> </subtitle> <title-group>  """
-        article_title = extract_target_content( "<title-group[\s\S]*?>([\s\S]*?)</title-group>", fdata )
-        article_title = article_title.replace( "-", " " )
-        print "ARTICLE-TITLE:", article_title
-        
-        
-        this_output = [ folder, dirname, filename, article_title, journal_title, grantNo ]
-        output.append( this_output )
-        
-        print ""
 
-# print output
-
-# for dir, n in visit.items():
-#     print dir, n
-
-with open("../qualified_articles_raw.csv", "a") as outfile:
-    for line in output:
-        line = [ s.replace(",", " ").replace(";", " ").replace("\n", " ").replace("\t", " ") for s in line ]
-        outfile.write( ','.join( line ) + '\n' )       
-outfile.close()    
-print "\n", len(output), "qualified articles have been output!"    
+if __name__ == '__main__':
+    root = "J:\\Medical Papers Data\\"
+    folder = "articles.A-B\\" # articles.A-B , articles.C-H , articles.I-N , articles.O-Z
+    path =  root + folder
+    output = []
+    
+    for dirname in os.listdir( path ):
+    #     visit[dirname] = 0
+    #     if dirname != "Oncogene":
+    #         continue
+        for filename in os.listdir( path + dirname ):
+    #         visit[dirname] += 1
+    #         if filename != "Oncogene_2012_Sep_6_31(36)_4045-4053.nxml":
+    #             continue
+            print(dirname + filename)
+            if filename[0] == '#' and filename[-1] == '#':
+                continue
+            
+            fdata = open( path + dirname + '\\' + filename , 'r').read()
+        
+            this_output = create_publication_from_rawtext(fdata)
+            if not this_output:
+                continue
+            output.append( this_output )
+            
+            print("")
+    
+    # print output
+    
+    # for dir, n in visit.items():
+    #     print dir, n
+    
+    with open("../qualified_articles_raw.csv", "a") as outfile:
+        for line in output:
+            line = [ s.replace(",", " ").replace(";", " ").replace("\n", " ").replace("\t", " ") for s in line ]
+            outfile.write( ','.join( line ) + '\n' )       
+    outfile.close()    
+    print("\n", len(output), "qualified articles have been output!")
 
 
 
