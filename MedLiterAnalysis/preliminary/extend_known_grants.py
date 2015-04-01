@@ -36,7 +36,7 @@ class Publication:
 class Grant:
     def __init__(self, grantID):
         self.grantID = grantID
-        self.authors_pool = set()
+        self.authors_pool = set() # only the authors in the seed publications are added
         self.publications = []
         
     def addPublication(self, pub):
@@ -143,7 +143,7 @@ if __name__ == '__main__':
     
     """ Find publications whose authors are also participate in seed grants. """
     root = "J:\\Medical Papers Data\\"
-    folders = [ "articles.A-B\\", "articles.C-H\\", "articles.I-N\\", "articles.O-Z\\" ]  
+    folders = [ "articles.A-B", "articles.C-H", "articles.I-N", "articles.O-Z" ]  
     matched_pub_counter = 0 
     total_filenum = 0 
     for folder in folders:
@@ -153,11 +153,11 @@ if __name__ == '__main__':
         for dirname in os.listdir( path ): 
             dir_num += 1
             print(folder, dirname, dir_num, matched_pub_counter, total_filenum)
-            for filename in os.listdir( path + dirname ):
+            for filename in os.listdir( "\\".join( [path, dirname] ) ):
                 if filename[0] == '#' and filename[-1] == '#':
                     continue
                 total_filenum += 1
-                fdata = open( path + dirname + '\\' + filename , 'r').read()
+                fdata = open( "\\".join( [path, dirname, filename] ) , 'r').read()
                 
                 """ Check if at least one author wrote any known grant. """
 #                 print(path + dirname + '\\' + filename)
@@ -182,6 +182,6 @@ if __name__ == '__main__':
     grant_withCandiPubs = []
     for grant in grant_table.values():
         grant_withCandiPubs.append(grant)
-    pickle.dump(grant_withCandiPubs, open('../grantsWithCandiPubs.pkl', 'wb'))            
+    pickle.dump( grant_withCandiPubs, open('../grantsWithCandiPubs.pkl', 'wb') )            
             
             
